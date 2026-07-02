@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -52,9 +52,38 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
+    @model_validator(mode="after")
+    def guard_non_local_secrets(self) -> "Settings":
+        if self.APP_ENV.lower() == "local":
+            return self
+
+        if self.JWT_SECRET_KEY in ("", "change_this_secret_key") or len(self.JWT_SECRET_KEY) < 32:
+            raise ValueError("JWT_SECRET_KEY is not secure enough for non-local environments.")
+
+        if self.ADMIN_PASSWORD_HASH in ("", "replace_with_bcrypt_hash"):
+            raise ValueError("ADMIN_PASSWORD_HASH must be configured for non-local environments.")
+
+        return self
+
     @property
     def cookie_secure(self) -> bool:
         return self.APP_ENV.lower() != "local"
+
+    @property
+    def docs_enabled(self) -> bool:
+        return self.APP_ENV.lower() == "local"
+
+    @property
+    def docs_url(self) -> str | None:
+        return "/docs" if self.docs_enabled else None
+
+    @property
+    def redoc_url(self) -> str | None:
+        return "/redoc" if self.docs_enabled else None
+
+    @property
+    def openapi_url(self) -> str | None:
+        return f"{self.API_V1_PREFIX}/openapi.json" if self.docs_enabled else None
 
 
 settings = Settings()

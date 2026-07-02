@@ -207,6 +207,8 @@ The frontend authenticates against:
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
 
+Authentication is cookie-based. After login, the API stores the session token in an httpOnly cookie, and the frontend sends it automatically with `credentials: "include"`.
+
 ## OMDb integration
 
 For local mock data:
@@ -268,6 +270,14 @@ Check these items:
 2. `DATABASE_URL` in `.env` matches the running database.
 3. The virtual environment is activated.
 4. Dependencies were installed with `pip install -r requirements.txt`.
+
+### The API refuses to start outside local
+
+For non-local environments, the app now blocks startup if:
+
+- `JWT_SECRET_KEY` is still the default value
+- `JWT_SECRET_KEY` is shorter than 32 characters
+- `ADMIN_PASSWORD_HASH` is still the placeholder value
 
 ### Docker is not running
 

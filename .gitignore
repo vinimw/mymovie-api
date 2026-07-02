@@ -11,7 +11,5 @@ __pycache__/
 .idea/
 .vscode/
 .pytest_cache/
-alembic/versions/*.py
-!alembic/versions/.gitkeep
 .postgres-data/
 postgres.log
