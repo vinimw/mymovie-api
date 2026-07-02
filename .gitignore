@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store
+.idea/
+.vscode/
+.pytest_cache/
+alembic/versions/*.py
+!alembic/versions/.gitkeep
+.postgres-data/
+postgres.log
