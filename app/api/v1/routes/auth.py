@@ -32,7 +32,7 @@ def login(payload: LoginRequest, response: Response) -> LoginResponse:
         key=settings.AUTH_COOKIE_NAME,
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         secure=settings.cookie_secure,
         max_age=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path="/",
@@ -47,7 +47,7 @@ def logout(response: Response) -> dict[str, str]:
         key=settings.AUTH_COOKIE_NAME,
         path="/",
         httponly=True,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         secure=settings.cookie_secure,
     )
     return {"message": "Logged out successfully."}

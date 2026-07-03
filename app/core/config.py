@@ -70,6 +70,10 @@ class Settings(BaseSettings):
         return self.APP_ENV.lower() != "local"
 
     @property
+    def cookie_samesite(self) -> str:
+        return "lax" if self.APP_ENV.lower() == "local" else "none"
+
+    @property
     def docs_enabled(self) -> bool:
         return self.APP_ENV.lower() == "local"
 
