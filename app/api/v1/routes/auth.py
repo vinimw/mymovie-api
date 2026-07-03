@@ -38,7 +38,7 @@ def login(payload: LoginRequest, response: Response) -> LoginResponse:
         path="/",
     )
 
-    return LoginResponse()
+    return LoginResponse(access_token=token)
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)

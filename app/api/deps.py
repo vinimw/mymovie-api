@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import Generator
 
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import AuthenticatedUser, decode_access_token
 from app.db.session import SessionLocal
+
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -20,8 +23,14 @@ def get_db() -> Generator[Session, None, None]:
 
 def get_current_user(
     request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> AuthenticatedUser:
-    token = request.cookies.get(settings.AUTH_COOKIE_NAME)
+    token: str | None = None
+
+    if credentials and credentials.scheme.lower() == "bearer":
+        token = credentials.credentials
+    else:
+        token = request.cookies.get(settings.AUTH_COOKIE_NAME)
 
     if not token:
         raise HTTPException(

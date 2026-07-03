@@ -7,7 +7,8 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    message: str = "Login successful."
+    access_token: str
+    token_type: str = "bearer"
 
 
 class MeResponse(BaseModel):
