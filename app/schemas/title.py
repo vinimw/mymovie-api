@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.title import TitleType, WatchStatus
 
@@ -44,6 +44,7 @@ class WatchedTitleCreate(BaseModel):
     year: int | None = None
     poster_url: str | None = None
     plot: str | None = None
+    comments: str | None = Field(default=None, max_length=2000)
     runtime_minutes: int | None = Field(default=None, ge=1)
     user_rating: int | None = Field(default=None, ge=1, le=5)
     status: WatchStatus
@@ -56,16 +57,37 @@ class WatchedTitleCreate(BaseModel):
             raise ValueError("Movies cannot receive episodes.")
         return self
 
+    @field_validator("comments")
+    @classmethod
+    def normalize_comments(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
 
 class WatchedTitleUpdate(BaseModel):
     user_rating: int | None = Field(default=None, ge=1, le=5)
     status: WatchStatus | None = None
+    comments: str | None = Field(default=None, max_length=2000)
 
     @model_validator(mode="after")
     def ensure_any_value(self) -> "WatchedTitleUpdate":
-        if self.user_rating is None and self.status is None:
+        if (
+            self.user_rating is None
+            and self.status is None
+            and "comments" not in self.model_fields_set
+        ):
             raise ValueError("Provide at least one field to update.")
         return self
+
+    @field_validator("comments")
+    @classmethod
+    def normalize_comments(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
 
 
 class WatchedTitleListItem(BaseModel):
@@ -79,6 +101,7 @@ class WatchedTitleListItem(BaseModel):
     year: int | None = None
     poster_url: str | None = None
     plot: str | None = None
+    comments: str | None = None
     runtime_minutes: int | None = None
     user_rating: int | None = None
     status: WatchStatus

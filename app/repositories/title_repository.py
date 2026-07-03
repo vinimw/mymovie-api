@@ -72,6 +72,7 @@ class TitleRepository:
             year=payload.year,
             poster_url=payload.poster_url,
             plot=payload.plot,
+            comments=payload.comments,
             runtime_minutes=payload.runtime_minutes,
             user_rating=payload.user_rating,
             status=payload.status,
@@ -102,6 +103,8 @@ class TitleRepository:
                 title.watched_at = None
             elif title.watched_at is None:
                 title.watched_at = self._now()
+        if "comments" in payload.model_fields_set:
+            title.comments = payload.comments
 
         self.db.add(title)
         self.db.commit()

@@ -40,6 +40,7 @@ class WatchedTitle(Base):
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     poster_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     plot: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comments: Mapped[str | None] = mapped_column(Text, nullable=True)
     runtime_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     user_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[WatchStatus] = mapped_column(
