@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
+from app.db.session import SessionLocal
+from app.models.title import WatchedTitle
+from app.models.title_membership import TitleMembership
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -17,6 +22,33 @@ app = FastAPI(
 )
 
 register_exception_handlers(app)
+
+
+@app.on_event("startup")
+def backfill_title_memberships() -> None:
+    db = SessionLocal()
+    try:
+        titles = list(
+            db.scalars(
+                select(WatchedTitle)
+                .options(selectinload(WatchedTitle.memberships))
+            ).unique().all()
+        )
+        all_user_emails = [user.email for user in settings.configured_admin_users]
+        changed = False
+
+        for title in titles:
+            if title.memberships:
+                continue
+
+            title.memberships = [TitleMembership(user_email=email) for email in all_user_emails]
+            db.add(title)
+            changed = True
+
+        if changed:
+            db.commit()
+    finally:
+        db.close()
 
 app.add_middleware(
     CORSMiddleware,

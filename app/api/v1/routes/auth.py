@@ -8,7 +8,7 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.exceptions import AuthenticationException
 from app.core.security import create_access_token, verify_password
-from app.schemas.auth import LoginRequest, LoginResponse, MeResponse
+from app.schemas.auth import BasicUser, LoginRequest, LoginResponse, MeResponse
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -43,6 +43,11 @@ def login(payload: LoginRequest, response: Response) -> LoginResponse:
         access_token=token,
         email=configured_user.email,
         display_name=configured_user.display_name,
+        other_users=[
+            BasicUser(email=user.email, display_name=user.display_name)
+            for user in settings.configured_admin_users
+            if user.email.lower() != configured_user.email.lower()
+        ],
     )
 
 
@@ -60,4 +65,12 @@ def logout(response: Response) -> dict[str, str]:
 
 @router.get("/me", response_model=MeResponse)
 def me(current_user=Depends(get_current_user)) -> MeResponse:
-    return MeResponse(email=current_user.email, display_name=current_user.display_name)
+    return MeResponse(
+        email=current_user.email,
+        display_name=current_user.display_name,
+        other_users=[
+            BasicUser(email=user.email, display_name=user.display_name)
+            for user in settings.configured_admin_users
+            if user.email.lower() != current_user.email.lower()
+        ],
+    )

@@ -29,7 +29,7 @@ class WatchedTitle(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    imdb_id: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    imdb_id: Mapped[str] = mapped_column(String(32), index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     original_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     title_type: Mapped[TitleType] = mapped_column(
@@ -58,6 +58,11 @@ class WatchedTitle(Base):
     )
 
     episodes: Mapped[list["WatchedEpisode"]] = relationship(
+        back_populates="watched_title",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    memberships: Mapped[list["TitleMembership"]] = relationship(
         back_populates="watched_title",
         cascade="all, delete-orphan",
         passive_deletes=True,
