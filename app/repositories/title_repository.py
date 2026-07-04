@@ -135,7 +135,11 @@ class TitleRepository:
             title.comments = payload.comments
 
         self.db.add(title)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError as exc:
+            self.db.rollback()
+            raise ConflictException("This title could not be updated because of a conflicting ownership record.") from exc
         return self.get_title_or_404(title.id)
 
     def delete_title(self, title_id: int, current_user: AuthenticatedUser) -> None:
@@ -206,7 +210,18 @@ class TitleRepository:
         return [current_user.email]
 
     def _set_memberships(self, title: WatchedTitle, owner_emails: list[str]) -> None:
-        title.memberships = [TitleMembership(user_email=email) for email in sorted(set(owner_emails))]
+        desired_emails = sorted(set(owner_emails))
+        existing_by_email = {membership.user_email: membership for membership in title.memberships}
+
+        title.memberships[:] = [
+            membership
+            for membership in title.memberships
+            if membership.user_email in desired_emails
+        ]
+
+        for email in desired_emails:
+            if email not in existing_by_email:
+                title.memberships.append(TitleMembership(user_email=email))
 
     def _find_duplicate_for_scope(self, imdb_id: str, owner_emails: list[str]) -> WatchedTitle | None:
         candidate_titles = list(
