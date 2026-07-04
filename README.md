@@ -83,6 +83,8 @@ Important variables:
 - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`: access token lifetime
 - `ADMIN_EMAIL`: initial admin email used for login
 - `ADMIN_PASSWORD_HASH`: bcrypt password hash
+- `ADMIN_EMAILS`: optional comma-separated list of login emails
+- `ADMIN_PASSWORD_HASHES`: optional comma-separated list of bcrypt hashes aligned with `ADMIN_EMAILS`
 - `OMDB_PROVIDER_MODE`: `mock` or `live`
 - `OMDB_API_BASE_URL`: OMDb base URL
 - `OMDB_API_KEY`: required when `OMDB_PROVIDER_MODE=live`
@@ -110,6 +112,12 @@ Or provide the password directly:
 
 ```bash
 python scripts/generate_password_hash.py "my_strong_password"
+```
+
+Generate multiple hashes in one line for `ADMIN_PASSWORD_HASHES`:
+
+```bash
+python scripts/generate_password_hash.py "password_one,password_two"
 ```
 
 If you want to avoid any Python path ambiguity:
@@ -196,10 +204,19 @@ Useful URLs:
 
 ## Authentication
 
-The API uses an admin login defined by:
+The API supports one or more configured logins defined by:
 
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD_HASH`
+- `ADMIN_EMAILS`
+- `ADMIN_PASSWORD_HASHES`
+
+When `ADMIN_EMAILS` and `ADMIN_PASSWORD_HASHES` are provided, values must be comma-separated and keep the same order. Example:
+
+```env
+ADMIN_EMAILS=alice@example.com,bob@example.com
+ADMIN_PASSWORD_HASHES=$2b$12$hash_for_alice,$2b$12$hash_for_bob
+```
 
 The frontend authenticates against:
 
@@ -234,6 +251,9 @@ The project keeps the `imdb_id` field name because OMDb uses IMDb identifiers.
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
 - `GET /api/v1/dashboard`
+- `GET /api/v1/notifications`
+- `GET /api/v1/notifications/unread-count`
+- `POST /api/v1/notifications/read-all`
 - `GET /api/v1/omdb/search`
 - `GET /api/v1/omdb/titles/{imdb_id}`
 - `GET /api/v1/omdb/titles/{imdb_id}/episodes`

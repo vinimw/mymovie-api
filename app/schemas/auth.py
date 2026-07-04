@@ -9,7 +9,10 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    email: str
+    display_name: str
 
 
 class MeResponse(BaseModel):
     email: str
+    display_name: str

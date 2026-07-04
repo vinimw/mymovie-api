@@ -15,16 +15,17 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/login", response_model=LoginResponse)
 def login(payload: LoginRequest, response: Response) -> LoginResponse:
-    credentials_are_valid = payload.email.lower() == settings.ADMIN_EMAIL.lower() and verify_password(
+    configured_user = settings.find_configured_admin_user(payload.email)
+    credentials_are_valid = configured_user is not None and verify_password(
         payload.password,
-        settings.ADMIN_PASSWORD_HASH,
+        configured_user.password_hash,
     )
 
     if not credentials_are_valid:
         raise AuthenticationException("Invalid email or password.")
 
     token = create_access_token(
-        subject=settings.ADMIN_EMAIL,
+        subject=configured_user.email,
         expires_delta=timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
     )
 
@@ -38,7 +39,11 @@ def login(payload: LoginRequest, response: Response) -> LoginResponse:
         path="/",
     )
 
-    return LoginResponse(access_token=token)
+    return LoginResponse(
+        access_token=token,
+        email=configured_user.email,
+        display_name=configured_user.display_name,
+    )
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
@@ -55,4 +60,4 @@ def logout(response: Response) -> dict[str, str]:
 
 @router.get("/me", response_model=MeResponse)
 def me(current_user=Depends(get_current_user)) -> MeResponse:
-    return MeResponse(email=current_user.email)
+    return MeResponse(email=current_user.email, display_name=current_user.display_name)

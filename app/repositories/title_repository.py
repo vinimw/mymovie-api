@@ -5,7 +5,7 @@ from typing import Iterable
 
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestException, ConflictException, NotFoundException
@@ -132,12 +132,21 @@ class TitleRepository:
         return self.get_title_or_404(title.id)
 
     def delete_episode(self, episode_id: int) -> None:
-        episode = self.db.get(WatchedEpisode, episode_id)
-        if not episode:
-            raise NotFoundException("Episode not found.")
+        episode = self.get_episode_or_404(episode_id)
 
         self.db.delete(episode)
         self.db.commit()
+
+    def get_episode_or_404(self, episode_id: int) -> WatchedEpisode:
+        stmt = (
+            select(WatchedEpisode)
+            .options(joinedload(WatchedEpisode.watched_title))
+            .where(WatchedEpisode.id == episode_id)
+        )
+        episode = self.db.scalar(stmt)
+        if not episode:
+            raise NotFoundException("Episode not found.")
+        return episode
 
     def _episode_model_from_payload(self, payload: WatchedEpisodeCreate) -> WatchedEpisode:
         return WatchedEpisode(

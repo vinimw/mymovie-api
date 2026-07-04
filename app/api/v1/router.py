@@ -1,10 +1,11 @@
 from fastapi import APIRouter
 
-from app.api.v1.routes import auth, dashboard, health, omdb, titles
+from app.api.v1.routes import auth, dashboard, health, notifications, omdb, titles
 
 api_router = APIRouter()
 api_router.include_router(health.router)
 api_router.include_router(auth.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(notifications.router)
 api_router.include_router(omdb.router)
 api_router.include_router(titles.router)

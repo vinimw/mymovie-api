@@ -13,6 +13,7 @@ from app.core.config import settings
 @dataclass(slots=True)
 class AuthenticatedUser:
     email: str
+    display_name: str
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

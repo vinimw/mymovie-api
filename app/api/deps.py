@@ -40,11 +40,15 @@ def get_current_user(
 
     payload = decode_access_token(token)
     email = payload.get("sub")
+    configured_user = settings.find_configured_admin_user(email or "")
 
-    if not email or email.lower() != settings.ADMIN_EMAIL.lower():
+    if not configured_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token.",
         )
 
-    return AuthenticatedUser(email=email)
+    return AuthenticatedUser(
+        email=configured_user.email,
+        display_name=configured_user.display_name,
+    )

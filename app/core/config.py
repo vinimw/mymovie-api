@@ -1,9 +1,22 @@
 from __future__ import annotations
 
 from typing import Annotated
+from dataclasses import dataclass
 
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+
+@dataclass(frozen=True, slots=True)
+class ConfiguredAdminUser:
+    email: str
+    password_hash: str
+    display_name: str
+
+
+def build_display_name(email: str) -> str:
+    local_part = email.split("@", 1)[0].replace(".", " ").replace("_", " ").replace("-", " ").strip()
+    return " ".join(chunk.capitalize() for chunk in local_part.split()) or email
 
 
 class Settings(BaseSettings):
@@ -38,6 +51,8 @@ class Settings(BaseSettings):
 
     ADMIN_EMAIL: str = "admin@mymovies.local"
     ADMIN_PASSWORD_HASH: str = "replace_with_bcrypt_hash"
+    ADMIN_EMAILS: str = ""
+    ADMIN_PASSWORD_HASHES: str = ""
 
     OMDB_PROVIDER_MODE: str = "mock"
     OMDB_API_BASE_URL: str = "https://www.omdbapi.com/"
@@ -54,16 +69,55 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def guard_non_local_secrets(self) -> "Settings":
+        configured_users = self.configured_admin_users
+
         if self.APP_ENV.lower() == "local":
             return self
 
         if self.JWT_SECRET_KEY in ("", "change_this_secret_key") or len(self.JWT_SECRET_KEY) < 32:
             raise ValueError("JWT_SECRET_KEY is not secure enough for non-local environments.")
 
-        if self.ADMIN_PASSWORD_HASH in ("", "replace_with_bcrypt_hash"):
-            raise ValueError("ADMIN_PASSWORD_HASH must be configured for non-local environments.")
+        for user in configured_users:
+            if user.password_hash in ("", "replace_with_bcrypt_hash"):
+                raise ValueError("All configured admin password hashes must be set for non-local environments.")
 
         return self
+
+    @property
+    def configured_admin_users(self) -> list[ConfiguredAdminUser]:
+        emails = self._parse_csv(self.ADMIN_EMAILS) or self._parse_csv(self.ADMIN_EMAIL)
+        password_hashes = self._parse_csv(self.ADMIN_PASSWORD_HASHES) or self._parse_csv(self.ADMIN_PASSWORD_HASH)
+
+        if len(emails) != len(password_hashes):
+            raise ValueError("ADMIN_EMAILS and ADMIN_PASSWORD_HASHES must contain the same number of values.")
+
+        normalized_emails = [email.lower() for email in emails]
+        if len(set(normalized_emails)) != len(normalized_emails):
+            raise ValueError("Configured admin emails must be unique.")
+
+        return [
+            ConfiguredAdminUser(
+                email=email,
+                password_hash=password_hash,
+                display_name=build_display_name(email),
+            )
+            for email, password_hash in zip(emails, password_hashes, strict=True)
+        ]
+
+    def find_configured_admin_user(self, email: str) -> ConfiguredAdminUser | None:
+        normalized_email = email.strip().lower()
+        for user in self.configured_admin_users:
+            if user.email.lower() == normalized_email:
+                return user
+        return None
+
+    def other_user_emails(self, current_email: str) -> list[str]:
+        normalized_email = current_email.strip().lower()
+        return [user.email for user in self.configured_admin_users if user.email.lower() != normalized_email]
+
+    @staticmethod
+    def _parse_csv(value: str) -> list[str]:
+        return [item.strip() for item in value.split(",") if item.strip()]
 
     @property
     def cookie_secure(self) -> bool:

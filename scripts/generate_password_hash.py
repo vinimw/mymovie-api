@@ -13,37 +13,55 @@ except ModuleNotFoundError as exc:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate a bcrypt hash for ADMIN_PASSWORD_HASH.")
+    parser = argparse.ArgumentParser(description="Generate bcrypt hashes for one or more admin passwords.")
     parser.add_argument(
-        "password",
-        nargs="?",
-        help="Plain text password to hash. If omitted, interactive mode is used.",
+        "passwords",
+        nargs="*",
+        help="Plain text password(s) to hash. Use commas to generate hashes for multiple users at once.",
     )
     parser.add_argument(
         "--no-confirm",
         action="store_true",
         help="Skip password confirmation in interactive mode.",
     )
+    parser.add_argument(
+        "--csv-output",
+        action="store_true",
+        help="Print hashes as a single comma-separated line, ready for ADMIN_PASSWORD_HASHES.",
+    )
     return parser.parse_args()
+
+
+def hash_password(password: str) -> str:
+    password_bytes = password.encode("utf-8")
+    if len(password_bytes) > 72:
+        raise SystemExit("Password must be at most 72 bytes long for bcrypt.")
+    return bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
 
 
 def main() -> None:
     args = parse_args()
 
-    password = args.password or getpass("Enter password to hash: ")
-    if not password:
-        raise SystemExit("Password cannot be empty.")
+    normalized_passwords = [item.strip() for value in args.passwords for item in value.split(",") if item.strip()]
 
-    if args.password is None and not args.no_confirm:
-        password_confirmation = getpass("Confirm password: ")
-        if password != password_confirmation:
-            raise SystemExit("Passwords do not match.")
+    if not normalized_passwords:
+        password = getpass("Enter password to hash: ")
+        if not password:
+            raise SystemExit("Password cannot be empty.")
 
-    password_bytes = password.encode("utf-8")
-    if len(password_bytes) > 72:
-        raise SystemExit("Password must be at most 72 bytes long for bcrypt.")
+        if not args.no_confirm:
+            password_confirmation = getpass("Confirm password: ")
+            if password != password_confirmation:
+                raise SystemExit("Passwords do not match.")
 
-    print(bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8"))
+        normalized_passwords = [password]
+
+    hashes = [hash_password(password) for password in normalized_passwords]
+    if args.csv_output or len(hashes) > 1:
+        print(",".join(hashes))
+        return
+
+    print(hashes[0])
 
 
 if __name__ == "__main__":
